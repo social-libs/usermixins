@@ -1,0 +1,26 @@
+{
+  "name": "social_usermixinslib",
+  "version": "1.0.0",
+  "description": "AllexJS lib with mixins for a social User",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/social-libs/usermixins.git"
+  },
+  "keywords": [
+    "ecosystem:AllexJS",
+    "social",
+    "user",
+    "mixins",
+    "lib"
+  ],
+  "author": "Andrija Petrovic <andrija.hers@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/social-libs/usermixins/issues"
+  },
+  "homepage": "https://github.com/social-libs/usermixins#readme"
+}
