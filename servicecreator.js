@@ -1,7 +1,9 @@
 function createUserServiceServiceMixin (execlib) {
   'use strict';
 
-  var lib = execlib.lib;
+  var lib = execlib.lib,
+    q = lib.q,
+    qlib = lib.qlib;
 
   function UserServiceServiceMixin (prophash) {
     if (!prophash.__hotel) {
@@ -19,8 +21,14 @@ function createUserServiceServiceMixin (execlib) {
       throw new lib.Error('INVALID_CGI_SERVICE_NAME', 'UserServiceServiceMixin needs the uploadsdirservicename property in the property hash __hotel');
     }
     this.pictureUploadHandler = this.createProfilePictureUploadHandler('pictureUploadURL', 'picture');
+    this.socialDBOpsProfileUpdateDefer = q.defer();
+    qlib.promise2defer(this.__hotel.socialDBOpsProfileUpdateDefer.promise, this.socialDBOpsProfileUpdateDefer);
   }
   UserServiceServiceMixin.prototype.destroy = function () {
+    if (this.socialDBOpsProfileUpdateDefer) {
+      this.socialDBOpsProfileUpdateDefer.reject(new lib.Error('DESTROYING_SELF', 'This instance of '+this.constructor.name+' is under destruction'));
+    }
+    this.socialDBOpsProfileUpdateDefer = null;
     if (this.pictureUploadHandler) {
       this.pictureUploadHandler.destroy();
     }
@@ -53,15 +61,27 @@ function createUserServiceServiceMixin (execlib) {
     }
     statefieldname = 'profile_'+picturename;
     picture = uploadeddata.remotefilepath;
+    /*
     updatehash = {};
     updatehash[picturename] = picture;
     that.__hotel.updateUserProfile(that.name, updatehash).then(
       that.set.bind(that, statefieldname, picture)
     );
+    */
+    that.updateProfile(picturename, picture).then(
+      that.set.bind(that, statefieldname, picture)
+    );
     that = null;
     picturename = null;
+    picture = null;
   };
 
+  UserServiceServiceMixin.prototype.updateProfile = function (propname, propval) {
+    var prof = {};
+    prof[propname] = propval;
+    return this.__hotel.updateUserProfile(this.name, prof);
+  };
+  
   UserServiceServiceMixin.prototype.updateNick = function (nick) {
     return this.__hotel.updateUserProfile(this.name, {
       nick: nick
@@ -80,6 +100,7 @@ function createUserServiceServiceMixin (execlib) {
   UserServiceServiceMixin.addMethods = function (klass) {
     lib.inheritMethods(klass, UserServiceServiceMixin
       ,'createProfilePictureUploadHandler'
+      ,'updateProfile'
       ,'updateNick'
       ,'updateLocation'
     );
