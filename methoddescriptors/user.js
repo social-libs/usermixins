@@ -9,7 +9,6 @@ module.exports = {
     name: 'User Name',
     type: 'string'
   }],
-  getUserProfileNotifications: true,
   updateNick: [{
     name: 'Nick',
     type: 'string'

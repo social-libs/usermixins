@@ -1,9 +1,11 @@
-function createUserServiceServiceMixin (execlib) {
+function createUserServiceServiceMixin (execlib, usercgiapilib) {
   'use strict';
 
   var lib = execlib.lib,
     q = lib.q,
-    qlib = lib.qlib;
+    qlib = lib.qlib,
+    execSuite = execlib.execSuite,
+    taskRegistry = execSuite.taskRegistry;
 
   function UserServiceServiceMixin (prophash) {
     if (!prophash.__hotel) {
@@ -21,14 +23,17 @@ function createUserServiceServiceMixin (execlib) {
       throw new lib.Error('INVALID_CGI_SERVICE_NAME', 'UserServiceServiceMixin needs the uploadsdirservicename property in the property hash __hotel');
     }
     this.pictureUploadHandler = this.createProfilePictureUploadHandler('pictureUploadURL', 'picture');
-    this.socialDBOpsProfileUpdateDefer = q.defer();
-    qlib.promise2defer(this.__hotel.socialDBOpsProfileUpdateDefer.promise, this.socialDBOpsProfileUpdateDefer);
+    this.hotelLastSocialProfileUpdateFollowerTask = taskRegistry.run('readState', {
+      state: this.__hotel.state,
+      name: 'lastSocialProfileUpdate',
+      cb: this.state.set.bind(this.state, 'lastSocialProfileUpdate')
+    });
   }
   UserServiceServiceMixin.prototype.destroy = function () {
-    if (this.socialDBOpsProfileUpdateDefer) {
-      this.socialDBOpsProfileUpdateDefer.reject(new lib.Error('DESTROYING_SELF', 'This instance of '+this.constructor.name+' is under destruction'));
+    if (this.hotelLastSocialProfileUpdateFollowerTask) {
+      this.hotelLastSocialProfileUpdateFollowerTask.destroy();
     }
-    this.socialDBOpsProfileUpdateDefer = null;
+    this.hotelLastSocialProfileUpdateFollowerTask = null;
     if (this.pictureUploadHandler) {
       this.pictureUploadHandler.destroy();
     }
@@ -39,7 +44,7 @@ function createUserServiceServiceMixin (execlib) {
 
   UserServiceServiceMixin.prototype.createProfilePictureUploadHandler = function (urlstatename, picturename) {
     var picturestatename = 'profile_'+picturename,
-      ret = new execlib.execSuite.userServiceSuite.UploadHandler(
+      ret = new usercgiapilib.UploadUniqueHandler(
         this,
         this.socialUserService_CGIServiceName,
         this.socialUserService_UploadsDirServiceName,
@@ -48,7 +53,7 @@ function createUserServiceServiceMixin (execlib) {
         urlstatename,
         onPictureUploaded.bind(null, this, picturename)
       );
-    ret.acquireSink();
+    ret.activate();
     return ret;
   };
 
@@ -59,15 +64,13 @@ function createUserServiceServiceMixin (execlib) {
       picturename = null;
       return;
     }
+    if (!(that && that.destroyed)) {
+      that = null;
+      picturename = null;
+      return;
+    }
     statefieldname = 'profile_'+picturename;
     picture = uploadeddata.remotefilepath;
-    /*
-    updatehash = {};
-    updatehash[picturename] = picture;
-    that.__hotel.updateUserProfile(that.name, updatehash).then(
-      that.set.bind(that, statefieldname, picture)
-    );
-    */
     that.updateProfile(picturename, picture).then(
       that.set.bind(that, statefieldname, picture)
     );
