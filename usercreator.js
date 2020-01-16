@@ -12,6 +12,9 @@ function createUserMixin (execlib) {
   UserServiceUserMixin.prototype.updateProfile = function (propname, propval, defer) {
     qlib.promise2defer(this.__service.updateProfile(propname, propval), defer);
   };
+  UserServiceUserMixin.prototype.updateProfileFromHash = function (prophash, defer) {
+    qlib.promise2defer(this.__service.updateProfileFromHash(prophash), defer);
+  };
   UserServiceUserMixin.prototype.getUserProfile = function (username, defer) {
     qlib.promise2defer(this.__service.__hotel.getUserProfile(username), defer);
   };
@@ -31,7 +34,7 @@ function createUserMixin (execlib) {
     );
   };
 
-  UserServiceUserMixin.visiblefields = ['lastSocialProfileUpdate', 'profile_picture', 'pictureUploadURL'];
+  UserServiceUserMixin.visiblefields = ['lastSocialProfileUpdate', 'profile_nick', 'profile_picture', 'profile_location', 'pictureUploadURL'];
 
   return UserServiceUserMixin;
 }

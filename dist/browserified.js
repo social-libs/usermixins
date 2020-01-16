@@ -10,6 +10,10 @@ module.exports = {
   },{
     name: 'Profile Property Value'
   }],
+  updateProfileFromHash: [{
+    name: 'Profile Hash',
+    type: 'object'
+  }],
   getUserProfile: [{
     name: 'User Name',
     type: 'string'

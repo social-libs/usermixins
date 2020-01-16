@@ -20,13 +20,16 @@ function createUserServiceServiceMixin (execlib, usercgiapilib) {
     }
     this.socialUserService_UploadsDirServiceName = prophash.__hotel.userprophash.uploadsdirservicename;
     if (!this.socialUserService_UploadsDirServiceName) {
-      throw new lib.Error('INVALID_CGI_SERVICE_NAME', 'UserServiceServiceMixin needs the uploadsdirservicename property in the property hash __hotel');
+      throw new lib.Error('INVALID_CGI_SERVICE_NAME', 'UserServiceServiceMixin needs the uploadsdirservicename property in the '+this.constructor.name+' prototype');
     }
-    this.pictureUploadHandler = this.createProfilePictureUploadHandler('pictureUploadURL', 'picture');
+    if (!this.profilePictureImageSizes) {
+      throw new lib.Error('INVALID_PROFILE_PICTURE_IMAGE_SIZES', 'UserServiceServiceMixin needs the profilePictureImageSizes property in the '+this.constructor.name+' prototype');
+    }
+    this.pictureUploadHandler = this.createProfilePictureUploadHandler('pictureUploadURL', 'picture', this.profilePictureImageSizes);
     this.hotelLastSocialProfileUpdateFollowerTask = taskRegistry.run('readState', {
       state: this.__hotel.state,
       name: 'lastSocialProfileUpdate',
-      cb: this.state.set.bind(this.state, 'lastSocialProfileUpdate')
+      cb: onHotelLastSocialProfileUpdate.bind(null, this)
     });
   }
   UserServiceServiceMixin.prototype.destroy = function () {
@@ -42,14 +45,14 @@ function createUserServiceServiceMixin (execlib, usercgiapilib) {
     this.socialUserService_CGIServiceName = null;
   };
 
-  UserServiceServiceMixin.prototype.createProfilePictureUploadHandler = function (urlstatename, picturename) {
-    var picturestatename = 'profile_'+picturename,
-      ret = new usercgiapilib.UploadUniqueHandler(
+  UserServiceServiceMixin.prototype.createProfilePictureUploadHandler = function (urlstatename, picturename, imagesizes) {
+    var ret = new usercgiapilib.UploadImageHandler(
         this,
         this.socialUserService_CGIServiceName,
         this.socialUserService_UploadsDirServiceName,
         null,
         null,
+        imagesizes,
         urlstatename,
         onPictureUploaded.bind(null, this, picturename)
       );
@@ -57,26 +60,19 @@ function createUserServiceServiceMixin (execlib, usercgiapilib) {
     return ret;
   };
 
-  function onPictureUploaded (that, picturename, uploadeddata) {
-    var statefieldname, picture, updatehash;
-    if (!lib.isVal(uploadeddata) && uploadeddata.remotefilepath) {
-      that = null;
-      picturename = null;
-      return;
-    }
-    if (!(that && that.destroyed)) {
-      that = null;
-      picturename = null;
-      return;
-    }
-    statefieldname = 'profile_'+picturename;
-    picture = uploadeddata.remotefilepath;
-    that.updateProfile(picturename, picture).then(
-      that.set.bind(that, statefieldname, picture)
-    );
-    that = null;
-    picturename = null;
-    picture = null;
+  UserServiceServiceMixin.prototype.createProfilePictureArrayUploadHandler = function (urlstatename, picturename, imagesizes) {
+    var ret = new usercgiapilib.UploadImageArrayElementHandler(
+        this,
+        this.socialUserService_CGIServiceName,
+        this.socialUserService_UploadsDirServiceName,
+        null,
+        null,
+        imagesizes,
+        urlstatename,
+        onPictureArrayElementUploaded.bind(null, this, picturename)
+      );
+    ret.activate();
+    return ret;
   };
 
   UserServiceServiceMixin.prototype.updateProfile = function (propname, propval) {
@@ -85,6 +81,10 @@ function createUserServiceServiceMixin (execlib, usercgiapilib) {
     return this.__hotel.updateUserProfile(this.name, prof);
   };
   
+  UserServiceServiceMixin.prototype.updateProfileFromHash = function (prophash) {
+    return this.__hotel.updateUserProfileFromHash(this.name, prophash);
+  };
+
   UserServiceServiceMixin.prototype.updateNick = function (nick) {
     return this.__hotel.updateUserProfile(this.name, {
       nick: nick
@@ -103,11 +103,70 @@ function createUserServiceServiceMixin (execlib, usercgiapilib) {
   UserServiceServiceMixin.addMethods = function (klass) {
     lib.inheritMethods(klass, UserServiceServiceMixin
       ,'createProfilePictureUploadHandler'
+      ,'createProfilePictureArrayUploadHandler'
       ,'updateProfile'
+      ,'updateProfileFromHash'
       ,'updateNick'
       ,'updateLocation'
     );
   }
+
+
+  function onPictureUploaded (that, picturename, uploadeddata) {
+    var statefieldname, picture, updatehash;
+    if (!lib.isVal(uploadeddata) && uploadeddata.remotefilepath) {
+      that = null;
+      picturename = null;
+      return;
+    }
+    if (!(that && that.destroyed)) {
+      that = null;
+      picturename = null;
+      return;
+    }
+    statefieldname = 'profile_'+picturename;
+    picture = uploadeddata.remotefilepath;
+    that.updateProfile(picturename, picture); /*.then(
+      that.set.bind(that, statefieldname, picture)
+    );*/
+    that = null;
+    picturename = null;
+    picture = null;
+  }
+
+  function onPictureArrayElementUploaded (that, picturename, uploadeddata) {
+    var statefieldname, picture, updatehash;
+    if (!lib.isVal(uploadeddata) && uploadeddata.remotefilepath) {
+      that = null;
+      picturename = null;
+      return;
+    }
+    if (!(that && that.destroyed)) {
+      that = null;
+      picturename = null;
+      return;
+    }
+    statefieldname = 'profile_'+picturename;
+    picture = uploadeddata.remotefilepath;
+    that.updateProfile(picturename+'.'+uploadeddata.data.imageIndex, picture); /*.then(
+      that.set.bind(that, statefieldname, picture)
+    );*/
+    that = null;
+    picturename = null;
+    picture = null;
+  }
+
+  function onHotelLastSocialProfileUpdate (that, update, prevupdate) {
+    if (!(that && that.destroyed)) {
+      that = null;
+      return;
+    }
+    if (lib.isArray(update) && update.length===2 && update[0] === that.name) { //this update is on ME
+      lib.traverseShallow(update[1], that.profileItemToState.bind(that));
+    }
+    that.state.set('lastSocialProfileUpdate', update);
+  }
+
 
   return UserServiceServiceMixin;
 }
