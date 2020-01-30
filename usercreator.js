@@ -28,6 +28,7 @@ function createUserMixin (execlib) {
   UserServiceUserMixin.addMethods = function (klass) {
     lib.inheritMethods(klass, UserServiceUserMixin
       ,'updateProfile'
+      ,'updateProfileFromHash'
       ,'getUserProfile'
       ,'updateNick'
       ,'updateLocation'
