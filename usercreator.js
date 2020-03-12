@@ -35,7 +35,7 @@ function createUserMixin (execlib) {
     );
   };
 
-  UserServiceUserMixin.visiblefields = ['lastSocialProfileUpdate', 'profile_nick', 'profile_picture', 'profile_location', 'pictureUploadURL'];
+  UserServiceUserMixin.visiblefields = ['lastSocialProfileUpdate', 'profile_nick', 'profile_picture', 'profile_location', 'profile_allow_notifications', 'pictureUploadURL'];
 
   return UserServiceUserMixin;
 }
